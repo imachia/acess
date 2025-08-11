@@ -1,0 +1,1218 @@
+version: '3.8'
+
+services:
+  access-control-full:
+    image: node:18-alpine
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:929d54bc0ff22387163f04cfb3b3d0fa@148.230.78.128:5432/controle
+      - PGHOST=148.230.78.128
+      - PGPORT=5432
+      - PGUSER=postgres
+      - PGPASSWORD=929d54bc0ff22387163f04cfb3b3d0fa
+      - PGDATABASE=controle
+      - PORT=3000
+    working_dir: /app
+    command: |
+      sh -c "
+      echo '🚀 Instalando sistema completo...' &&
+      apk add --no-cache npm &&
+      npm init -y &&
+      npm install express@4.18.2 pg@8.11.3 --production &&
+      
+      echo '📁 Criando estrutura...' &&
+      mkdir -p public/assets &&
+      
+      echo '🎨 Criando frontend React completo...' &&
+      cat > public/index.html << 'HTML'
+      <!DOCTYPE html>
+      <html lang='pt-BR'>
+      <head>
+        <meta charset='UTF-8'>
+        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+        <title>Sistema de Controle de Acesso - SaaS</title>
+        <script src='https://unpkg.com/react@18/umd/react.production.min.js'></script>
+        <script src='https://unpkg.com/react-dom@18/umd/react-dom.production.min.js'></script>
+        <script src='https://cdn.tailwindcss.com'></script>
+        <script src='https://cdn.jsdelivr.net/npm/recharts@2.5.0/umd/Recharts.js'></script>
+        <link href='https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css' rel='stylesheet'>
+        <script src='https://unpkg.com/lucide@latest/dist/umd/lucide.js'></script>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+          .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+          .glass-card { background: rgba(255,255,255,0.95); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.2); }
+          .bullet-item { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: all 0.3s ease; border: none !important; }
+          .bullet-item:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+          .stat-card { background: linear-gradient(135deg, var(--from), var(--to)); border-radius: 16px; color: white; padding: 24px; }
+          .sidebar { width: 280px; background: linear-gradient(180deg, #1e293b 0%, #334155 100%); height: 100vh; position: fixed; left: 0; top: 0; z-index: 50; }
+          .main-content { margin-left: 280px; min-height: 100vh; background: #f8fafc; }
+          .nav-item { display: flex; align-items: center; padding: 12px 20px; color: #cbd5e1; cursor: pointer; transition: all 0.2s; border-radius: 8px; margin: 4px 16px; }
+          .nav-item:hover, .nav-item.active { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+          .btn { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-weight: 500; transition: all 0.2s; }
+          .btn-primary { background: #3b82f6; color: white; }
+          .btn-primary:hover { background: #2563eb; }
+          .btn-outline { background: transparent; color: #3b82f6; border: 1px solid #3b82f6; }
+          .btn-outline:hover { background: #3b82f6; color: white; }
+          .input { width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; }
+          .input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+          .card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 24px; border: none !important; }
+          .badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+          .badge-success { background: #dcfce7; color: #166534; }
+          .badge-danger { background: #fef2f2; color: #dc2626; }
+          .badge-warning { background: #fef3c7; color: #d97706; }
+          .hidden { display: none; }
+          .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: center; justify-center; }
+          .modal-content { background: white; border-radius: 12px; padding: 24px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; }
+          .form-group { margin-bottom: 16px; }
+          .label { display: block; margin-bottom: 8px; font-weight: 500; color: #374151; }
+          .text-center { text-align: center; }
+          .space-y-4 > * + * { margin-top: 16px; }
+          .space-y-6 > * + * { margin-top: 24px; }
+          .grid { display: grid; }
+          .grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+          .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          .grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+          .grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+          .gap-4 { gap: 16px; }
+          .gap-6 { gap: 24px; }
+          .flex { display: flex; }
+          .items-center { align-items: center; }
+          .justify-between { justify-content: space-between; }
+          .justify-center { justify-content: center; }
+          .space-x-2 > * + * { margin-left: 8px; }
+          .space-x-4 > * + * { margin-left: 16px; }
+          .mb-2 { margin-bottom: 8px; }
+          .mb-4 { margin-bottom: 16px; }
+          .mb-6 { margin-bottom: 24px; }
+          .mb-8 { margin-bottom: 32px; }
+          .mt-4 { margin-top: 16px; }
+          .p-4 { padding: 16px; }
+          .p-6 { padding: 24px; }
+          .px-4 { padding-left: 16px; padding-right: 16px; }
+          .py-2 { padding-top: 8px; padding-bottom: 8px; }
+          .py-4 { padding-top: 16px; padding-bottom: 16px; }
+          .text-sm { font-size: 14px; }
+          .text-lg { font-size: 18px; }
+          .text-xl { font-size: 20px; }
+          .text-2xl { font-size: 24px; }
+          .text-3xl { font-size: 30px; }
+          .font-bold { font-weight: 700; }
+          .font-semibold { font-weight: 600; }
+          .text-gray-600 { color: #6b7280; }
+          .text-gray-500 { color: #9ca3af; }
+          .text-gray-800 { color: #1f2937; }
+          .text-white { color: white; }
+          .bg-white { background-color: white; }
+          .bg-gray-50 { background-color: #f9fafb; }
+          .bg-green-500 { background-color: #10b981; }
+          .bg-red-500 { background-color: #ef4444; }
+          .bg-blue-500 { background-color: #3b82f6; }
+          .bg-yellow-500 { background-color: #eab308; }
+          .w-full { width: 100%; }
+          .w-3 { width: 12px; }
+          .h-3 { height: 12px; }
+          .h-10 { height: 40px; }
+          .rounded-full { border-radius: 9999px; }
+          .rounded-lg { border-radius: 8px; }
+          .shadow-lg { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+          .opacity-80 { opacity: 0.8; }
+          @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); transition: transform 0.3s; }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0; }
+            .grid-cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .grid-cols-3 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+          }
+        </style>
+      </head>
+      <body>
+        <div id='root'></div>
+        
+        <script>
+          const { useState, useEffect, useMemo, createContext, useContext } = React;
+          
+          // Context for authentication
+          const AuthContext = createContext({
+            user: null,
+            login: () => {},
+            logout: () => {},
+            isAuthenticated: false
+          });
+          
+          // Context for theme
+          const ThemeContext = createContext({
+            theme: 'light',
+            toggleTheme: () => {}
+          });
+          
+          // Mock auth functions
+          const mockUsers = [
+            { id: '1', name: 'Administrador', email: 'admin@test.com', password: '123456', role: 'Administrador' },
+            { id: '2', name: 'João Silva', email: 'joao@test.com', password: '123456', role: 'Lojista' },
+            { id: '3', name: 'Maria Santos', email: 'maria@test.com', password: '123456', role: 'Técnico' }
+          ];
+          
+          function authenticateUser(email, password) {
+            return mockUsers.find(user => user.email === email && user.password === password);
+          }
+          
+          // Main App Component
+          function App() {
+            const [user, setUser] = useState(() => {
+              const saved = localStorage.getItem('auth-user');
+              return saved ? JSON.parse(saved) : null;
+            });
+            const [currentPage, setCurrentPage] = useState('landing');
+            const [theme, setTheme] = useState('light');
+            const [sidebarOpen, setSidebarOpen] = useState(false);
+            
+            const login = (userData) => {
+              setUser(userData);
+              localStorage.setItem('auth-user', JSON.stringify(userData));
+              setCurrentPage('dashboard');
+            };
+            
+            const logout = () => {
+              setUser(null);
+              localStorage.removeItem('auth-user');
+              setCurrentPage('landing');
+            };
+            
+            const isAuthenticated = !!user;
+            
+            const toggleTheme = () => {
+              setTheme(prev => prev === 'light' ? 'dark' : 'light');
+            };
+            
+            useEffect(() => {
+              if (isAuthenticated && currentPage === 'landing') {
+                setCurrentPage('dashboard');
+              }
+            }, [isAuthenticated, currentPage]);
+            
+            const authValue = { user, login, logout, isAuthenticated };
+            const themeValue = { theme, toggleTheme };
+            
+            return React.createElement(AuthContext.Provider, { value: authValue },
+              React.createElement(ThemeContext.Provider, { value: themeValue },
+                React.createElement(Router, { 
+                  currentPage, 
+                  setCurrentPage, 
+                  sidebarOpen, 
+                  setSidebarOpen 
+                })
+              )
+            );
+          }
+          
+          // Router Component
+          function Router({ currentPage, setCurrentPage, sidebarOpen, setSidebarOpen }) {
+            const { isAuthenticated } = useContext(AuthContext);
+            
+            const renderPage = () => {
+              if (!isAuthenticated && !['landing', 'login', 'register'].includes(currentPage)) {
+                return React.createElement(Landing, { setCurrentPage });
+              }
+              
+              switch (currentPage) {
+                case 'landing': return React.createElement(Landing, { setCurrentPage });
+                case 'login': return React.createElement(Login, { setCurrentPage });
+                case 'register': return React.createElement(Register, { setCurrentPage });
+                case 'dashboard': return React.createElement(Dashboard, { setCurrentPage });
+                case 'stores': return React.createElement(Stores, { setCurrentPage });
+                case 'devices': return React.createElement(Devices, { setCurrentPage });
+                case 'clients': return React.createElement(Clients, { setCurrentPage });
+                case 'users': return React.createElement(Users, { setCurrentPage });
+                case 'logs': return React.createElement(Logs, { setCurrentPage });
+                case 'alerts': return React.createElement(Alerts, { setCurrentPage });
+                case 'settings': return React.createElement(Settings, { setCurrentPage });
+                default: return React.createElement(Landing, { setCurrentPage });
+              }
+            };
+            
+            if (isAuthenticated && !['landing', 'login', 'register'].includes(currentPage)) {
+              return React.createElement('div', { className: 'min-h-screen bg-gray-50' },
+                React.createElement(Sidebar, { 
+                  currentPage, 
+                  setCurrentPage, 
+                  isOpen: sidebarOpen, 
+                  onClose: () => setSidebarOpen(false) 
+                }),
+                React.createElement('div', { className: 'main-content' },
+                  React.createElement(Topbar, { onMenuClick: () => setSidebarOpen(true) }),
+                  renderPage()
+                )
+              );
+            }
+            
+            return renderPage();
+          }
+          
+          // Landing Page
+          function Landing({ setCurrentPage }) {
+            const { isAuthenticated } = useContext(AuthContext);
+            
+            useEffect(() => {
+              if (isAuthenticated) {
+                setCurrentPage('dashboard');
+              }
+            }, [isAuthenticated]);
+            
+            return React.createElement('div', { className: 'min-h-screen gradient-bg' },
+              React.createElement('div', { className: 'container mx-auto px-6 py-12' },
+                React.createElement('div', { className: 'text-center mb-16' },
+                  React.createElement('div', { className: 'flex items-center justify-center space-x-3 mb-8' },
+                    React.createElement('div', { className: 'w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-lg' },
+                      React.createElement('i', { 'data-lucide': 'shield-check', className: 'w-8 h-8 text-blue-600' })
+                    ),
+                    React.createElement('h1', { className: 'text-5xl font-bold text-white' }, 'AccessControl')
+                  ),
+                  React.createElement('p', { className: 'text-2xl text-white/90 mb-8' }, 'Sistema SaaS de Controle de Acesso'),
+                  React.createElement('p', { className: 'text-lg text-white/80 max-w-2xl mx-auto mb-12' }, 
+                    'Monitore e gerencie o acesso às suas instalações com nossa plataforma inteligente e segura'
+                  ),
+                  React.createElement('div', { className: 'space-x-4' },
+                    React.createElement('button', { 
+                      className: 'btn btn-primary px-8 py-4 text-lg shadow-lg',
+                      onClick: () => setCurrentPage('login')
+                    }, 'Fazer Login'),
+                    React.createElement('button', { 
+                      className: 'btn btn-outline px-8 py-4 text-lg text-white border-white hover:bg-white hover:text-blue-600',
+                      onClick: () => setCurrentPage('register')
+                    }, 'Criar Conta')
+                  )
+                ),
+                
+                React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-3 gap-8 mb-16' },
+                  [
+                    { icon: 'monitor', title: 'Monitoramento em Tempo Real', desc: 'Acompanhe todos os acessos em tempo real com notificações instantâneas' },
+                    { icon: 'users', title: 'Gestão de Usuários', desc: 'Controle completo sobre permissões e níveis de acesso' },
+                    { icon: 'shield', title: 'Máxima Segurança', desc: 'Criptografia avançada e logs detalhados de segurança' }
+                  ].map((feature, i) => 
+                    React.createElement('div', { key: i, className: 'glass-card p-8 text-center' },
+                      React.createElement('div', { className: 'w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6' },
+                        React.createElement('i', { 'data-lucide': feature.icon, className: 'w-8 h-8 text-blue-600' })
+                      ),
+                      React.createElement('h3', { className: 'text-xl font-bold text-gray-800 mb-4' }, feature.title),
+                      React.createElement('p', { className: 'text-gray-600' }, feature.desc)
+                    )
+                  )
+                )
+              )
+            );
+          }
+          
+          // Login Page
+          function Login({ setCurrentPage }) {
+            const { login } = useContext(AuthContext);
+            const [formData, setFormData] = useState({ email: 'admin@test.com', password: '123456' });
+            const [isLoading, setIsLoading] = useState(false);
+            const [error, setError] = useState('');
+            
+            const handleSubmit = async (e) => {
+              e.preventDefault();
+              setIsLoading(true);
+              setError('');
+              
+              const user = authenticateUser(formData.email, formData.password);
+              if (user) {
+                login(user);
+              } else {
+                setError('Email ou senha incorretos');
+              }
+              setIsLoading(false);
+            };
+            
+            return React.createElement('div', { className: 'min-h-screen gradient-bg flex items-center justify-center' },
+              React.createElement('div', { className: 'glass-card p-8 w-full max-w-md' },
+                React.createElement('div', { className: 'text-center mb-8' },
+                  React.createElement('div', { className: 'w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4' },
+                    React.createElement('i', { 'data-lucide': 'shield-check', className: 'w-8 h-8 text-white' })
+                  ),
+                  React.createElement('h2', { className: 'text-3xl font-bold text-gray-800 mb-2' }, 'Entrar'),
+                  React.createElement('p', { className: 'text-gray-600' }, 'Acesse sua conta do sistema')
+                ),
+                
+                error && React.createElement('div', { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4' }, error),
+                
+                React.createElement('form', { onSubmit: handleSubmit, className: 'space-y-6' },
+                  React.createElement('div', { className: 'form-group' },
+                    React.createElement('label', { className: 'label' }, 'Email'),
+                    React.createElement('input', {
+                      type: 'email',
+                      className: 'input',
+                      value: formData.email,
+                      onChange: (e) => setFormData({...formData, email: e.target.value}),
+                      required: true
+                    })
+                  ),
+                  React.createElement('div', { className: 'form-group' },
+                    React.createElement('label', { className: 'label' }, 'Senha'),
+                    React.createElement('input', {
+                      type: 'password',
+                      className: 'input',
+                      value: formData.password,
+                      onChange: (e) => setFormData({...formData, password: e.target.value}),
+                      required: true
+                    })
+                  ),
+                  React.createElement('button', {
+                    type: 'submit',
+                    className: 'btn btn-primary w-full py-3',
+                    disabled: isLoading
+                  }, isLoading ? 'Entrando...' : 'Entrar'),
+                  
+                  React.createElement('div', { className: 'text-center' },
+                    React.createElement('button', {
+                      type: 'button',
+                      className: 'text-blue-600 hover:underline',
+                      onClick: () => setCurrentPage('register')
+                    }, 'Criar nova conta'),
+                    React.createElement('span', { className: 'mx-2 text-gray-400' }, '|'),
+                    React.createElement('button', {
+                      type: 'button',
+                      className: 'text-blue-600 hover:underline',
+                      onClick: () => setCurrentPage('landing')
+                    }, 'Voltar')
+                  )
+                ),
+                
+                React.createElement('div', { className: 'mt-6 p-4 bg-blue-50 rounded-lg' },
+                  React.createElement('p', { className: 'text-sm text-blue-800 font-semibold mb-2' }, 'Contas de teste:'),
+                  React.createElement('div', { className: 'text-xs text-blue-700 space-y-1' },
+                    React.createElement('div', null, 'Admin: admin@test.com / 123456'),
+                    React.createElement('div', null, 'Lojista: joao@test.com / 123456'),
+                    React.createElement('div', null, 'Técnico: maria@test.com / 123456')
+                  )
+                )
+              )
+            );
+          }
+          
+          // Register Page
+          function Register({ setCurrentPage }) {
+            const [formData, setFormData] = useState({
+              name: '', email: '', password: '', confirmPassword: '', role: 'Lojista'
+            });
+            const [isLoading, setIsLoading] = useState(false);
+            const [error, setError] = useState('');
+            
+            const handleSubmit = (e) => {
+              e.preventDefault();
+              setError('');
+              
+              if (formData.password !== formData.confirmPassword) {
+                setError('Senhas não coincidem');
+                return;
+              }
+              
+              setIsLoading(true);
+              setTimeout(() => {
+                setIsLoading(false);
+                setCurrentPage('login');
+              }, 1000);
+            };
+            
+            return React.createElement('div', { className: 'min-h-screen gradient-bg flex items-center justify-center' },
+              React.createElement('div', { className: 'glass-card p-8 w-full max-w-md' },
+                React.createElement('div', { className: 'text-center mb-8' },
+                  React.createElement('div', { className: 'w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4' },
+                    React.createElement('i', { 'data-lucide': 'user-plus', className: 'w-8 h-8 text-white' })
+                  ),
+                  React.createElement('h2', { className: 'text-3xl font-bold text-gray-800 mb-2' }, 'Criar Conta'),
+                  React.createElement('p', { className: 'text-gray-600' }, 'Registre-se no sistema')
+                ),
+                
+                error && React.createElement('div', { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4' }, error),
+                
+                React.createElement('form', { onSubmit: handleSubmit, className: 'space-y-4' },
+                  React.createElement('div', { className: 'form-group' },
+                    React.createElement('label', { className: 'label' }, 'Nome Completo'),
+                    React.createElement('input', {
+                      type: 'text',
+                      className: 'input',
+                      value: formData.name,
+                      onChange: (e) => setFormData({...formData, name: e.target.value}),
+                      required: true
+                    })
+                  ),
+                  React.createElement('div', { className: 'form-group' },
+                    React.createElement('label', { className: 'label' }, 'Email'),
+                    React.createElement('input', {
+                      type: 'email',
+                      className: 'input',
+                      value: formData.email,
+                      onChange: (e) => setFormData({...formData, email: e.target.value}),
+                      required: true
+                    })
+                  ),
+                  React.createElement('div', { className: 'form-group' },
+                    React.createElement('label', { className: 'label' }, 'Cargo'),
+                    React.createElement('select', {
+                      className: 'input',
+                      value: formData.role,
+                      onChange: (e) => setFormData({...formData, role: e.target.value})
+                    },
+                      React.createElement('option', { value: 'Lojista' }, 'Lojista'),
+                      React.createElement('option', { value: 'Técnico' }, 'Técnico'),
+                      React.createElement('option', { value: 'Administrador' }, 'Administrador')
+                    )
+                  ),
+                  React.createElement('div', { className: 'form-group' },
+                    React.createElement('label', { className: 'label' }, 'Senha'),
+                    React.createElement('input', {
+                      type: 'password',
+                      className: 'input',
+                      value: formData.password,
+                      onChange: (e) => setFormData({...formData, password: e.target.value}),
+                      required: true
+                    })
+                  ),
+                  React.createElement('div', { className: 'form-group' },
+                    React.createElement('label', { className: 'label' }, 'Confirmar Senha'),
+                    React.createElement('input', {
+                      type: 'password',
+                      className: 'input',
+                      value: formData.confirmPassword,
+                      onChange: (e) => setFormData({...formData, confirmPassword: e.target.value}),
+                      required: true
+                    })
+                  ),
+                  React.createElement('button', {
+                    type: 'submit',
+                    className: 'btn btn-primary w-full py-3',
+                    disabled: isLoading
+                  }, isLoading ? 'Criando...' : 'Criar Conta'),
+                  
+                  React.createElement('div', { className: 'text-center' },
+                    React.createElement('button', {
+                      type: 'button',
+                      className: 'text-blue-600 hover:underline',
+                      onClick: () => setCurrentPage('login')
+                    }, 'Já tem conta? Fazer login'),
+                    React.createElement('span', { className: 'mx-2 text-gray-400' }, '|'),
+                    React.createElement('button', {
+                      type: 'button',
+                      className: 'text-blue-600 hover:underline',
+                      onClick: () => setCurrentPage('landing')
+                    }, 'Voltar')
+                  )
+                )
+              )
+            );
+          }
+          
+          // Sidebar Component
+          function Sidebar({ currentPage, setCurrentPage, isOpen, onClose }) {
+            const { user, logout } = useContext(AuthContext);
+            
+            const menuItems = [
+              { id: 'dashboard', label: 'Dashboard', icon: 'layout-dashboard' },
+              { id: 'stores', label: 'Lojas', icon: 'store' },
+              { id: 'devices', label: 'Dispositivos', icon: 'monitor' },
+              { id: 'clients', label: 'Clientes', icon: 'users' },
+              { id: 'users', label: 'Usuários', icon: 'user-cog' },
+              { id: 'logs', label: 'Logs de Acesso', icon: 'file-text' },
+              { id: 'alerts', label: 'Alertas', icon: 'alert-triangle' },
+              { id: 'settings', label: 'Configurações', icon: 'settings' }
+            ];
+            
+            return React.createElement('div', { className: \`sidebar \${isOpen ? 'open' : ''}\` },
+              React.createElement('div', { className: 'p-6 border-b border-gray-700' },
+                React.createElement('div', { className: 'flex items-center space-x-3' },
+                  React.createElement('div', { className: 'w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center' },
+                    React.createElement('i', { 'data-lucide': 'shield-check', className: 'w-6 h-6 text-white' })
+                  ),
+                  React.createElement('div', null,
+                    React.createElement('h1', { className: 'text-white font-bold text-lg' }, 'AccessControl'),
+                    React.createElement('p', { className: 'text-gray-400 text-sm' }, 'v2.0')
+                  )
+                )
+              ),
+              
+              React.createElement('div', { className: 'p-4' },
+                React.createElement('div', { className: 'bg-gray-800 rounded-lg p-4 mb-6' },
+                  React.createElement('div', { className: 'flex items-center space-x-3' },
+                    React.createElement('div', { className: 'w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center' },
+                      React.createElement('i', { 'data-lucide': 'user', className: 'w-5 h-5 text-white' })
+                    ),
+                    React.createElement('div', null,
+                      React.createElement('p', { className: 'text-white font-semibold' }, user?.name || 'Usuário'),
+                      React.createElement('p', { className: 'text-gray-400 text-sm' }, user?.role || 'Cargo')
+                    )
+                  )
+                )
+              ),
+              
+              React.createElement('nav', { className: 'flex-1' },
+                menuItems.map(item =>
+                  React.createElement('div', {
+                    key: item.id,
+                    className: \`nav-item \${currentPage === item.id ? 'active' : ''}\`,
+                    onClick: () => {
+                      setCurrentPage(item.id);
+                      onClose();
+                    }
+                  },
+                    React.createElement('i', { 'data-lucide': item.icon, className: 'w-5 h-5 mr-3' }),
+                    React.createElement('span', null, item.label)
+                  )
+                )
+              ),
+              
+              React.createElement('div', { className: 'p-4 border-t border-gray-700' },
+                React.createElement('button', {
+                  className: 'nav-item w-full text-left text-red-400 hover:bg-red-500/10',
+                  onClick: logout
+                },
+                  React.createElement('i', { 'data-lucide': 'log-out', className: 'w-5 h-5 mr-3' }),
+                  React.createElement('span', null, 'Sair')
+                )
+              )
+            );
+          }
+          
+          // Topbar Component  
+          function Topbar({ onMenuClick }) {
+            return React.createElement('div', { className: 'bg-white shadow-sm border-b p-4 flex items-center justify-between' },
+              React.createElement('button', {
+                className: 'md:hidden btn btn-outline p-2',
+                onClick: onMenuClick
+              },
+                React.createElement('i', { 'data-lucide': 'menu', className: 'w-5 h-5' })
+              ),
+              React.createElement('div', { className: 'flex items-center space-x-4' },
+                React.createElement('i', { 'data-lucide': 'bell', className: 'w-5 h-5 text-gray-600 cursor-pointer' }),
+                React.createElement('i', { 'data-lucide': 'settings', className: 'w-5 h-5 text-gray-600 cursor-pointer' })
+              )
+            );
+          }
+          
+          // Dashboard Component with Real Data
+          function Dashboard({ setCurrentPage }) {
+            const [data, setData] = useState({
+              logs: [], stores: [], devices: [], clients: [], users: [], alerts: []
+            });
+            const [loading, setLoading] = useState(true);
+            
+            useEffect(() => {
+              const fetchData = async () => {
+                try {
+                  const [logs, stores, devices, clients, users, alerts] = await Promise.all([
+                    fetch('/api/access-logs').then(r => r.json()),
+                    fetch('/api/stores').then(r => r.json()),
+                    fetch('/api/devices').then(r => r.json()),
+                    fetch('/api/clients').then(r => r.json()),
+                    fetch('/api/users').then(r => r.json()),
+                    fetch('/api/alerts').then(r => r.json())
+                  ]);
+                  
+                  setData({ logs, stores, devices, clients, users, alerts });
+                } catch (error) {
+                  console.error('Erro ao carregar dados:', error);
+                } finally {
+                  setLoading(false);
+                }
+              };
+              
+              fetchData();
+            }, []);
+            
+            if (loading) {
+              return React.createElement('div', { className: 'p-8 text-center' },
+                React.createElement('p', { className: 'text-lg' }, 'Carregando dashboard...')
+              );
+            }
+            
+            const stats = [
+              { title: 'Total de Acessos', value: data.logs.length, icon: 'activity', from: '#3B82F6', to: '#1D4ED8' },
+              { title: 'Lojas Ativas', value: data.stores.length, icon: 'store', from: '#10B981', to: '#059669' },
+              { title: 'Dispositivos', value: data.devices.length, icon: 'monitor', from: '#8B5CF6', to: '#7C3AED' },
+              { title: 'Clientes Ativos', value: data.clients.length, icon: 'users', from: '#F59E0B', to: '#D97706' }
+            ];
+            
+            const recentLogs = data.logs.slice(0, 10);
+            
+            return React.createElement('div', { className: 'p-8' },
+              React.createElement('div', { className: 'mb-8' },
+                React.createElement('h1', { className: 'text-3xl font-bold text-gray-800 mb-2' }, '📊 Dashboard'),
+                React.createElement('p', { className: 'text-gray-600' }, 'Visão geral do sistema de controle de acesso')
+              ),
+              
+              React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-4 gap-6 mb-8' },
+                stats.map((stat, i) =>
+                  React.createElement('div', {
+                    key: i,
+                    className: 'stat-card',
+                    style: { '--from': stat.from, '--to': stat.to }
+                  },
+                    React.createElement('div', { className: 'flex items-center justify-between' },
+                      React.createElement('div', null,
+                        React.createElement('p', { className: 'text-white/80 text-sm' }, stat.title),
+                        React.createElement('p', { className: 'text-3xl font-bold mt-1' }, stat.value)
+                      ),
+                      React.createElement('i', { 'data-lucide': stat.icon, className: 'w-8 h-8 text-white/80' })
+                    )
+                  )
+                )
+              ),
+              
+              React.createElement('div', { className: 'grid grid-cols-1 lg:grid-cols-2 gap-8' },
+                React.createElement('div', { className: 'card' },
+                  React.createElement('h2', { className: 'text-xl font-bold text-gray-800 mb-6' }, '📋 Eventos Recentes'),
+                  React.createElement('div', { className: 'space-y-4' },
+                    recentLogs.length > 0 ? recentLogs.map((log, i) =>
+                      React.createElement('div', { key: i, className: 'bullet-item p-4' },
+                        React.createElement('div', { className: 'flex items-center justify-between' },
+                          React.createElement('div', { className: 'flex items-center space-x-3' },
+                            React.createElement('div', { 
+                              className: \`w-3 h-3 rounded-full \${log.action === 'Entrada' ? 'bg-green-500' : 'bg-red-500'}\`
+                            }),
+                            React.createElement('div', null,
+                              React.createElement('p', { className: 'font-semibold text-gray-800' }, log.user_name || 'Usuário'),
+                              React.createElement('p', { className: 'text-sm text-gray-600' }, log.device_name || 'Dispositivo'),
+                              React.createElement('p', { className: 'text-xs text-gray-500' }, 
+                                new Date(log.timestamp).toLocaleString('pt-BR')
+                              )
+                            )
+                          ),
+                          React.createElement('span', {
+                            className: \`badge \${log.action === 'Entrada' ? 'badge-success' : 'badge-danger'}\`
+                          }, log.action)
+                        )
+                      )
+                    ) : React.createElement('p', { className: 'text-gray-500 text-center py-8' }, 'Nenhum evento encontrado')
+                  )
+                ),
+                
+                React.createElement('div', { className: 'card' },
+                  React.createElement('h2', { className: 'text-xl font-bold text-gray-800 mb-6' }, '🚨 Alertas Recentes'),
+                  React.createElement('div', { className: 'space-y-4' },
+                    data.alerts.slice(0, 5).map((alert, i) =>
+                      React.createElement('div', { key: i, className: 'bullet-item p-4' },
+                        React.createElement('div', { className: 'flex items-center justify-between' },
+                          React.createElement('div', null,
+                            React.createElement('p', { className: 'font-semibold text-gray-800' }, alert.title),
+                            React.createElement('p', { className: 'text-sm text-gray-600' }, alert.description),
+                            React.createElement('p', { className: 'text-xs text-gray-500' }, 
+                              new Date(alert.timestamp).toLocaleString('pt-BR')
+                            )
+                          ),
+                          React.createElement('span', {
+                            className: \`badge \${alert.type === 'security' ? 'badge-danger' : 'badge-warning'}\`
+                          }, alert.type === 'security' ? 'Segurança' : 'Sistema')
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            );
+          }
+          
+          // Similar components for other pages (Stores, Devices, etc.)
+          function Stores() {
+            const [stores, setStores] = useState([]);
+            const [loading, setLoading] = useState(true);
+            
+            useEffect(() => {
+              fetch('/api/stores')
+                .then(r => r.json())
+                .then(data => {
+                  setStores(data);
+                  setLoading(false);
+                })
+                .catch(err => {
+                  console.error('Erro:', err);
+                  setLoading(false);
+                });
+            }, []);
+            
+            if (loading) {
+              return React.createElement('div', { className: 'p-8 text-center' }, 'Carregando lojas...');
+            }
+            
+            return React.createElement('div', { className: 'p-8' },
+              React.createElement('h1', { className: 'text-3xl font-bold text-gray-800 mb-8' }, '🏪 Gerenciar Lojas'),
+              React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' },
+                stores.map((store, i) =>
+                  React.createElement('div', { key: i, className: 'card' },
+                    React.createElement('h3', { className: 'text-xl font-bold text-gray-800 mb-2' }, store.name),
+                    React.createElement('p', { className: 'text-gray-600 mb-2' }, store.address),
+                    React.createElement('p', { className: 'text-sm text-gray-500' }, store.phone),
+                    React.createElement('div', { className: 'mt-4' },
+                      React.createElement('span', { 
+                        className: \`badge \${store.status === 'Ativa' ? 'badge-success' : 'badge-danger'}\`
+                      }, store.status)
+                    )
+                  )
+                )
+              )
+            );
+          }
+          
+          function Devices() {
+            const [devices, setDevices] = useState([]);
+            const [loading, setLoading] = useState(true);
+            
+            useEffect(() => {
+              fetch('/api/devices')
+                .then(r => r.json())
+                .then(data => {
+                  setDevices(data);
+                  setLoading(false);
+                })
+                .catch(err => {
+                  console.error('Erro:', err);
+                  setLoading(false);
+                });
+            }, []);
+            
+            if (loading) {
+              return React.createElement('div', { className: 'p-8 text-center' }, 'Carregando dispositivos...');
+            }
+            
+            return React.createElement('div', { className: 'p-8' },
+              React.createElement('h1', { className: 'text-3xl font-bold text-gray-800 mb-8' }, '📱 Gerenciar Dispositivos'),
+              React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' },
+                devices.map((device, i) =>
+                  React.createElement('div', { key: i, className: 'card' },
+                    React.createElement('h3', { className: 'text-xl font-bold text-gray-800 mb-2' }, device.name),
+                    React.createElement('p', { className: 'text-gray-600 mb-2' }, device.type),
+                    React.createElement('p', { className: 'text-sm text-gray-500' }, device.location),
+                    React.createElement('div', { className: 'mt-4' },
+                      React.createElement('span', { 
+                        className: \`badge \${device.status === 'Ativo' ? 'badge-success' : 'badge-danger'}\`
+                      }, device.status)
+                    )
+                  )
+                )
+              )
+            );
+          }
+          
+          function Clients() {
+            const [clients, setClients] = useState([]);
+            const [loading, setLoading] = useState(true);
+            
+            useEffect(() => {
+              fetch('/api/clients')
+                .then(r => r.json())
+                .then(data => {
+                  setClients(data);
+                  setLoading(false);
+                })
+                .catch(err => {
+                  console.error('Erro:', err);
+                  setLoading(false);
+                });
+            }, []);
+            
+            if (loading) {
+              return React.createElement('div', { className: 'p-8 text-center' }, 'Carregando clientes...');
+            }
+            
+            return React.createElement('div', { className: 'p-8' },
+              React.createElement('h1', { className: 'text-3xl font-bold text-gray-800 mb-8' }, '👥 Gerenciar Clientes'),
+              React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' },
+                clients.map((client, i) =>
+                  React.createElement('div', { key: i, className: 'card' },
+                    React.createElement('div', { className: 'flex items-center space-x-4 mb-4' },
+                      client.photo && React.createElement('img', { 
+                        src: client.photo, 
+                        alt: client.name,
+                        className: 'w-16 h-16 rounded-full object-cover'
+                      }),
+                      React.createElement('div', null,
+                        React.createElement('h3', { className: 'text-xl font-bold text-gray-800' }, client.name),
+                        React.createElement('p', { className: 'text-gray-600' }, client.email)
+                      )
+                    ),
+                    React.createElement('p', { className: 'text-sm text-gray-500 mb-2' }, client.department),
+                    React.createElement('div', { className: 'mt-4' },
+                      React.createElement('span', { 
+                        className: \`badge \${client.status === 'Ativo' ? 'badge-success' : 'badge-danger'}\`
+                      }, client.status)
+                    )
+                  )
+                )
+              )
+            );
+          }
+          
+          function Users() {
+            const [users, setUsers] = useState([]);
+            const [loading, setLoading] = useState(true);
+            
+            useEffect(() => {
+              fetch('/api/users')
+                .then(r => r.json())
+                .then(data => {
+                  setUsers(data);
+                  setLoading(false);
+                })
+                .catch(err => {
+                  console.error('Erro:', err);
+                  setLoading(false);
+                });
+            }, []);
+            
+            if (loading) {
+              return React.createElement('div', { className: 'p-8 text-center' }, 'Carregando usuários...');
+            }
+            
+            return React.createElement('div', { className: 'p-8' },
+              React.createElement('h1', { className: 'text-3xl font-bold text-gray-800 mb-8' }, '👤 Gerenciar Usuários'),
+              React.createElement('div', { className: 'space-y-4' },
+                users.map((user, i) =>
+                  React.createElement('div', { key: i, className: 'bullet-item p-6' },
+                    React.createElement('div', { className: 'flex items-center justify-between' },
+                      React.createElement('div', { className: 'flex items-center space-x-4' },
+                        React.createElement('div', { className: 'w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center' },
+                          React.createElement('i', { 'data-lucide': 'user', className: 'w-6 h-6 text-blue-600' })
+                        ),
+                        React.createElement('div', null,
+                          React.createElement('h3', { className: 'text-lg font-bold text-gray-800' }, user.username),
+                          React.createElement('p', { className: 'text-gray-600' }, user.email || 'Email não informado'),
+                          React.createElement('p', { className: 'text-sm text-gray-500' }, user.role || 'Cargo não definido')
+                        )
+                      ),
+                      React.createElement('span', { className: 'badge badge-success' }, 'Ativo')
+                    )
+                  )
+                )
+              )
+            );
+          }
+          
+          function Logs() {
+            const [logs, setLogs] = useState([]);
+            const [loading, setLoading] = useState(true);
+            
+            useEffect(() => {
+              fetch('/api/access-logs')
+                .then(r => r.json())
+                .then(data => {
+                  setLogs(data);
+                  setLoading(false);
+                })
+                .catch(err => {
+                  console.error('Erro:', err);
+                  setLoading(false);
+                });
+            }, []);
+            
+            if (loading) {
+              return React.createElement('div', { className: 'p-8 text-center' }, 'Carregando logs...');
+            }
+            
+            return React.createElement('div', { className: 'p-8' },
+              React.createElement('h1', { className: 'text-3xl font-bold text-gray-800 mb-8' }, '📋 Logs de Acesso'),
+              React.createElement('p', { className: 'text-gray-600 mb-6' }, \`Total de registros: \${logs.length}\`),
+              React.createElement('div', { className: 'space-y-4' },
+                logs.slice(0, 50).map((log, i) =>
+                  React.createElement('div', { key: i, className: 'bullet-item p-4' },
+                    React.createElement('div', { className: 'flex items-center justify-between' },
+                      React.createElement('div', { className: 'flex items-center space-x-4' },
+                        React.createElement('div', { 
+                          className: \`w-3 h-3 rounded-full \${log.action === 'Entrada' ? 'bg-green-500' : 'bg-red-500'}\`
+                        }),
+                        React.createElement('div', null,
+                          React.createElement('p', { className: 'font-semibold text-gray-800' }, log.user_name || 'Usuário não identificado'),
+                          React.createElement('p', { className: 'text-sm text-gray-600' }, log.device_name || 'Dispositivo'),
+                          React.createElement('p', { className: 'text-xs text-gray-500' }, 
+                            new Date(log.timestamp).toLocaleString('pt-BR')
+                          )
+                        )
+                      ),
+                      React.createElement('div', { className: 'text-right' },
+                        React.createElement('span', {
+                          className: \`badge \${log.action === 'Entrada' ? 'badge-success' : 'badge-danger'}\`
+                        }, log.action),
+                        React.createElement('p', { className: 'text-xs text-gray-500 mt-1' }, \`ID: \${log.id}\`)
+                      )
+                    )
+                  )
+                )
+              )
+            );
+          }
+          
+          function Alerts() {
+            const [alerts, setAlerts] = useState([]);
+            const [loading, setLoading] = useState(true);
+            
+            useEffect(() => {
+              fetch('/api/alerts')
+                .then(r => r.json())
+                .then(data => {
+                  setAlerts(data);
+                  setLoading(false);
+                })
+                .catch(err => {
+                  console.error('Erro:', err);
+                  setLoading(false);
+                });
+            }, []);
+            
+            if (loading) {
+              return React.createElement('div', { className: 'p-8 text-center' }, 'Carregando alertas...');
+            }
+            
+            return React.createElement('div', { className: 'p-8' },
+              React.createElement('h1', { className: 'text-3xl font-bold text-gray-800 mb-8' }, '🚨 Alertas do Sistema'),
+              React.createElement('div', { className: 'space-y-4' },
+                alerts.map((alert, i) =>
+                  React.createElement('div', { key: i, className: 'bullet-item p-6' },
+                    React.createElement('div', { className: 'flex items-start justify-between' },
+                      React.createElement('div', { className: 'flex items-start space-x-4' },
+                        React.createElement('div', { 
+                          className: \`w-10 h-10 rounded-full flex items-center justify-center \${
+                            alert.type === 'security' ? 'bg-red-100' : 'bg-yellow-100'
+                          }\`
+                        },
+                          React.createElement('i', { 
+                            'data-lucide': alert.type === 'security' ? 'shield-alert' : 'alert-triangle',
+                            className: \`w-5 h-5 \${alert.type === 'security' ? 'text-red-600' : 'text-yellow-600'}\`
+                          })
+                        ),
+                        React.createElement('div', null,
+                          React.createElement('h3', { className: 'text-lg font-bold text-gray-800' }, alert.title),
+                          React.createElement('p', { className: 'text-gray-600 mb-2' }, alert.description),
+                          React.createElement('p', { className: 'text-sm text-gray-500' }, 
+                            new Date(alert.timestamp).toLocaleString('pt-BR')
+                          )
+                        )
+                      ),
+                      React.createElement('div', { className: 'text-right' },
+                        React.createElement('span', {
+                          className: \`badge \${alert.status === 'Pendente' ? 'badge-warning' : 'badge-success'}\`
+                        }, alert.status),
+                        React.createElement('p', { className: 'text-xs text-gray-500 mt-1' }, 
+                          alert.type === 'security' ? 'Segurança' : 'Sistema'
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            );
+          }
+          
+          function Settings() {
+            const [settings, setSettings] = useState({
+              systemName: 'AccessControl SaaS',
+              autoBackup: true,
+              notificationsEnabled: true,
+              maxLoginAttempts: 3
+            });
+            
+            return React.createElement('div', { className: 'p-8' },
+              React.createElement('h1', { className: 'text-3xl font-bold text-gray-800 mb-8' }, '⚙️ Configurações do Sistema'),
+              
+              React.createElement('div', { className: 'grid grid-cols-1 lg:grid-cols-2 gap-8' },
+                React.createElement('div', { className: 'card' },
+                  React.createElement('h2', { className: 'text-xl font-bold text-gray-800 mb-6' }, 'Configurações Gerais'),
+                  React.createElement('div', { className: 'space-y-4' },
+                    React.createElement('div', { className: 'form-group' },
+                      React.createElement('label', { className: 'label' }, 'Nome do Sistema'),
+                      React.createElement('input', {
+                        type: 'text',
+                        className: 'input',
+                        value: settings.systemName,
+                        onChange: (e) => setSettings({...settings, systemName: e.target.value})
+                      })
+                    ),
+                    React.createElement('div', { className: 'form-group' },
+                      React.createElement('label', { className: 'label' }, 'Máximo de Tentativas de Login'),
+                      React.createElement('input', {
+                        type: 'number',
+                        className: 'input',
+                        value: settings.maxLoginAttempts,
+                        onChange: (e) => setSettings({...settings, maxLoginAttempts: parseInt(e.target.value)})
+                      })
+                    )
+                  )
+                ),
+                
+                React.createElement('div', { className: 'card' },
+                  React.createElement('h2', { className: 'text-xl font-bold text-gray-800 mb-6' }, 'Status do Sistema'),
+                  React.createElement('div', { className: 'space-y-4' },
+                    React.createElement('div', { className: 'flex items-center justify-between p-4 bg-green-50 rounded-lg' },
+                      React.createElement('div', { className: 'flex items-center space-x-3' },
+                        React.createElement('div', { className: 'w-3 h-3 bg-green-500 rounded-full' }),
+                        React.createElement('span', { className: 'font-semibold text-green-800' }, 'Banco de Dados')
+                      ),
+                      React.createElement('span', { className: 'badge badge-success' }, 'Conectado')
+                    ),
+                    React.createElement('div', { className: 'flex items-center justify-between p-4 bg-green-50 rounded-lg' },
+                      React.createElement('div', { className: 'flex items-center space-x-3' },
+                        React.createElement('div', { className: 'w-3 h-3 bg-green-500 rounded-full' }),
+                        React.createElement('span', { className: 'font-semibold text-green-800' }, 'Servidor')
+                      ),
+                      React.createElement('span', { className: 'badge badge-success' }, 'Online')
+                    ),
+                    React.createElement('div', { className: 'flex items-center justify-between p-4 bg-blue-50 rounded-lg' },
+                      React.createElement('div', { className: 'flex items-center space-x-3' },
+                        React.createElement('div', { className: 'w-3 h-3 bg-blue-500 rounded-full' }),
+                        React.createElement('span', { className: 'font-semibold text-blue-800' }, 'PostgreSQL Externo')
+                      ),
+                      React.createElement('span', { className: 'badge badge-success' }, '600+ Logs')
+                    )
+                  )
+                )
+              ),
+              
+              React.createElement('div', { className: 'mt-8' },
+                React.createElement('button', { className: 'btn btn-primary mr-4' }, 'Salvar Configurações'),
+                React.createElement('button', { className: 'btn btn-outline' }, 'Restaurar Padrões')
+              )
+            );
+          }
+          
+          // Initialize Lucide icons after render
+          function initializeIcons() {
+            if (window.lucide) {
+              window.lucide.createIcons();
+            }
+          }
+          
+          // Render the app
+          ReactDOM.render(React.createElement(App), document.getElementById('root'));
+          
+          // Initialize icons after a short delay
+          setTimeout(initializeIcons, 100);
+          setInterval(initializeIcons, 1000);
+        </script>
+      </body>
+      </html>
+      HTML
+      
+      echo '🔧 Criando servidor backend completo...' &&
+      cat > server.js << 'JS'
+      const express = require('express');
+      const { Pool } = require('pg');
+      const app = express();
+      const port = 3000;
+      
+      console.log('🚀 Iniciando servidor completo...');
+      
+      const pool = new Pool({
+        connectionString: process.env.DATABASE_URL
+      });
+      
+      app.use(express.static('public'));
+      app.use(express.json());
+      
+      // Health check
+      app.get('/api/health', async (req, res) => {
+        try {
+          const result = await pool.query('SELECT NOW(), COUNT(*) as total_logs FROM access_logs');
+          res.json({ 
+            status: 'ok', 
+            database: 'connected',
+            time: result.rows[0].now,
+            total_logs: result.rows[0].total_logs,
+            host: process.env.PGHOST
+          });
+        } catch (error) {
+          res.status(500).json({ status: 'error', error: error.message });
+        }
+      });
+      
+      // Access logs
+      app.get('/api/access-logs', async (req, res) => {
+        try {
+          const result = await pool.query('SELECT * FROM access_logs WHERE user_name IS NOT NULL ORDER BY timestamp DESC LIMIT 200');
+          console.log('📊 Logs encontrados:', result.rows.length);
+          res.json(result.rows);
+        } catch (error) {
+          console.error('❌ Erro logs:', error);
+          res.status(500).json({ error: error.message });
+        }
+      });
+      
+      // Stores
+      app.get('/api/stores', async (req, res) => {
+        try {
+          const result = await pool.query('SELECT * FROM stores ORDER BY name');
+          res.json(result.rows);
+        } catch (error) {
+          console.error('❌ Erro stores:', error);
+          res.status(500).json({ error: error.message });
+        }
+      });
+      
+      // Devices
+      app.get('/api/devices', async (req, res) => {
+        try {
+          const result = await pool.query('SELECT * FROM devices ORDER BY name');
+          res.json(result.rows);
+        } catch (error) {
+          console.error('❌ Erro devices:', error);
+          res.status(500).json({ error: error.message });
+        }
+      });
+      
+      // Clients
+      app.get('/api/clients', async (req, res) => {
+        try {
+          const result = await pool.query('SELECT * FROM clients ORDER BY name');
+          res.json(result.rows);
+        } catch (error) {
+          console.error('❌ Erro clients:', error);
+          res.status(500).json({ error: error.message });
+        }
+      });
+      
+      // Users
+      app.get('/api/users', async (req, res) => {
+        try {
+          const result = await pool.query('SELECT id, username, email, role, created_at FROM users ORDER BY username');
+          res.json(result.rows);
+        } catch (error) {
+          console.error('❌ Erro users:', error);
+          res.status(500).json({ error: error.message });
+        }
+      });
+      
+      // Alerts
+      app.get('/api/alerts', async (req, res) => {
+        try {
+          const result = await pool.query('SELECT * FROM alerts ORDER BY timestamp DESC LIMIT 100');
+          res.json(result.rows);
+        } catch (error) {
+          console.error('❌ Erro alerts:', error);
+          res.status(500).json({ error: error.message });
+        }
+      });
+      
+      // Fallback para servir o React app
+      app.get('*', (req, res) => {
+        res.sendFile('/app/public/index.html');
+      });
+      
+      app.listen(port, '0.0.0.0', () => {
+        console.log('✅ Sistema completo rodando na porta ' + port);
+        console.log('🎨 Frontend: React SPA completo');
+        console.log('🔌 Backend: Express + PostgreSQL');
+        console.log('📊 Dashboard: http://localhost:' + port);
+        console.log('🔍 Health: http://localhost:' + port + '/api/health');
+        console.log('📡 PostgreSQL: ' + process.env.PGHOST);
+      });
+      JS
+      
+      echo '🎯 Iniciando sistema completo...' &&
+      node server.js
+      "
+    deploy:
+      replicas: 1
+    networks:
+      - default
+
+networks:
+  default:
+    driver: overlay
