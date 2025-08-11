@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  access-control-saas:
+    image: node:18-alpine
+    ports:
+      - target: 5000
+        published: 3000
+        protocol: tcp
+        mode: host
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:929d54bc0ff22387163f04cfb3b3d0fa@148.230.78.128:5432/controle
+      PGHOST: 148.230.78.128
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: 929d54bc0ff22387163f04cfb3b3d0fa
+      PGDATABASE: controle
+      PORT: 5000
+    working_dir: /app
+    command: |
+      sh -c "
+      echo 'Access Control SaaS - Swarm Deploy' &&
+      apk add --no-cache curl npm git &&
+      git clone https://github.com/machisa/access.git . &&
+      npm ci --production &&
+      npm run dev
+      "
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+      resources:
+        limits:
+          memory: 1024M
+        reservations:
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+networks:
+  default:
+    driver: overlay
+    attachable: true
