@@ -1,16 +1,14 @@
 version: '3.8'
 
 services:
-  access-control:
+  web:
     image: node:18-alpine
     ports:
-      - target: 5000
-        published: 3000
-        mode: host
+      - "3000:5000"
     environment:
-      - NODE_ENV=production
-      - DATABASE_URL=postgresql://postgres:929d54bc0ff22387163f04cfb3b3d0fa@148.230.78.128:5432/controle
-      - PORT=5000
+      DATABASE_URL: postgresql://postgres:929d54bc0ff22387163f04cfb3b3d0fa@148.230.78.128:5432/controle
+      PORT: 5000
+      NODE_ENV: production
     working_dir: /app
     command: >
       sh -c "
@@ -20,6 +18,4 @@ services:
       npm run dev
       "
     deploy:
-      mode: global
-      restart_policy:
-        condition: on-failure
+      replicas: 1
