@@ -121,9 +121,9 @@ services:
         reservations:
           memory: 256M
     networks:
-      - default
+      - lavone
 
 networks:
-  default:
+  lavone:
     driver: overlay
     attachable: true
