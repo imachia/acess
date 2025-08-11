@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  access-control-saas:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:929d54bc0ff22387163f04cfb3b3d0fa@148.230.78.128:5432/controle
+      - PGHOST=148.230.78.128
+      - PGPORT=5432
+      - PGUSER=postgres
+      - PGPASSWORD=929d54bc0ff22387163f04cfb3b3d0fa
+      - PGDATABASE=controle
+      - PORT=3000
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  default:
+    driver: bridge
