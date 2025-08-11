@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  access-control-app:
+    build: .
+    container_name: access-control-saas
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:929d54bc0ff22387163f04cfb3b3d0fa@148.230.78.128:5432/controle
+      - PGHOST=148.230.78.128
+      - PGPORT=5432
+      - PGUSER=postgres
+      - PGPASSWORD=929d54bc0ff22387163f04cfb3b3d0fa
+      - PGDATABASE=controle
+      - S3_ACCESS_KEY=kEtCCAq0EAaQHJtPg8Mh
+      - S3_SECRET_KEY=tBQT17iRlqvJEYWXuIcS7Wl3g1jXsJreI31k2aTC
+      - S3_BUCKET=primus
+      - S3_ENDPOINT=s3.deliwise.com.br
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5000/api/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1));"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - access-control-network
+
+networks:
+  access-control-network:
+    driver: bridge
