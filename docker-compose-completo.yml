@@ -1,0 +1,281 @@
+version: '3.8'
+
+services:
+  access-control-app:
+    image: node:18-alpine
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:929d54bc0ff22387163f04cfb3b3d0fa@148.230.78.128:5432/controle
+      - PGHOST=148.230.78.128
+      - PGPORT=5432
+      - PGUSER=postgres
+      - PGPASSWORD=929d54bc0ff22387163f04cfb3b3d0fa
+      - PGDATABASE=controle
+      - PORT=5000
+    working_dir: /app
+    command: |
+      sh -c "
+      echo 'Instalando dependências...' &&
+      apk add --no-cache npm git &&
+      npm init -y &&
+      npm install express pg path &&
+      
+      echo 'Criando estrutura...' &&
+      mkdir -p public &&
+      
+      echo 'Criando frontend React...' &&
+      cat > public/index.html << 'EOF'
+      <!DOCTYPE html>
+      <html lang='pt-BR'>
+      <head>
+        <meta charset='UTF-8'>
+        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+        <title>Sistema de Controle de Acesso</title>
+        <script src='https://unpkg.com/react@18/umd/react.production.min.js'></script>
+        <script src='https://unpkg.com/react-dom@18/umd/react-dom.production.min.js'></script>
+        <script src='https://cdn.tailwindcss.com'></script>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+          .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+          .card { background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.1); }
+          .bullet-item { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: all 0.2s; }
+          .bullet-item:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+          .stat-card { background: linear-gradient(135deg, var(--color-from), var(--color-to)); }
+        </style>
+      </head>
+      <body class='bg-gray-50'>
+        <div id='root'></div>
+        <script>
+          const { useState, useEffect } = React;
+          
+          function Dashboard() {
+            const [stats, setStats] = useState({ logs: 0, stores: 0, devices: 0, clients: 0 });
+            const [logs, setLogs] = useState([]);
+            const [loading, setLoading] = useState(true);
+            
+            useEffect(() => {
+              Promise.all([
+                fetch('/api/access-logs').then(r => r.json()),
+                fetch('/api/stores').then(r => r.json()),
+                fetch('/api/devices').then(r => r.json()),
+                fetch('/api/clients').then(r => r.json())
+              ]).then(([logsData, storesData, devicesData, clientsData]) => {
+                setLogs(logsData.slice(0, 10));
+                setStats({
+                  logs: logsData.length,
+                  stores: storesData.length,
+                  devices: devicesData.length,
+                  clients: clientsData.length
+                });
+                setLoading(false);
+              }).catch(err => {
+                console.error('Erro ao carregar dados:', err);
+                setLoading(false);
+              });
+            }, []);
+            
+            const statCards = [
+              { title: 'Total de Logs', value: stats.logs, from: '#3B82F6', to: '#1D4ED8', icon: '📊' },
+              { title: 'Lojas Ativas', value: stats.stores, from: '#10B981', to: '#059669', icon: '🏪' },
+              { title: 'Dispositivos', value: stats.devices, from: '#8B5CF6', to: '#7C3AED', icon: '📱' },
+              { title: 'Clientes', value: stats.clients, from: '#F59E0B', to: '#D97706', icon: '👥' }
+            ];
+            
+            if (loading) {
+              return React.createElement('div', { className: 'min-h-screen gradient-bg flex items-center justify-center' },
+                React.createElement('div', { className: 'text-white text-xl' }, 'Carregando sistema...')
+              );
+            }
+            
+            return React.createElement('div', { className: 'min-h-screen gradient-bg' },
+              React.createElement('div', { className: 'container mx-auto px-6 py-8' },
+                // Header
+                React.createElement('div', { className: 'text-center mb-12' },
+                  React.createElement('h1', { className: 'text-5xl font-bold text-white mb-4' }, '🔐 Sistema de Controle de Acesso'),
+                  React.createElement('p', { className: 'text-xl text-white/80' }, 'Dashboard de monitoramento em tempo real')
+                ),
+                
+                // Stats Cards
+                React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12' },
+                  statCards.map((stat, i) => 
+                    React.createElement('div', { 
+                      key: i, 
+                      className: 'stat-card p-6 rounded-2xl text-white shadow-lg',
+                      style: { '--color-from': stat.from, '--color-to': stat.to }
+                    },
+                      React.createElement('div', { className: 'flex items-center justify-between' },
+                        React.createElement('div', null,
+                          React.createElement('p', { className: 'text-white/80 text-sm font-medium' }, stat.title),
+                          React.createElement('p', { className: 'text-3xl font-bold mt-1' }, stat.value)
+                        ),
+                        React.createElement('div', { className: 'text-4xl opacity-80' }, stat.icon)
+                      )
+                    )
+                  )
+                ),
+                
+                // Recent Events
+                React.createElement('div', { className: 'card p-8' },
+                  React.createElement('div', { className: 'flex items-center mb-6' },
+                    React.createElement('h2', { className: 'text-3xl font-bold text-gray-800' }, '📋 Eventos Recentes'),
+                    React.createElement('span', { className: 'ml-auto bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium' }, 
+                      'Últimos ' + logs.length + ' eventos'
+                    )
+                  ),
+                  React.createElement('div', { className: 'space-y-4' },
+                    logs.length > 0 ? logs.map((log, i) => 
+                      React.createElement('div', { key: i, className: 'bullet-item p-4 flex items-center justify-between' },
+                        React.createElement('div', { className: 'flex items-center space-x-4' },
+                          React.createElement('div', { className: 'w-3 h-3 rounded-full ' + (log.action === 'Entrada' ? 'bg-green-500' : 'bg-red-500') }),
+                          React.createElement('div', null,
+                            React.createElement('p', { className: 'font-semibold text-gray-800' }, log.user_name || 'Usuário'),
+                            React.createElement('p', { className: 'text-sm text-gray-600' }, log.device_name || 'Dispositivo'),
+                            React.createElement('p', { className: 'text-xs text-gray-500' }, new Date(log.timestamp).toLocaleString('pt-BR'))
+                          )
+                        ),
+                        React.createElement('span', { 
+                          className: 'px-4 py-2 rounded-full text-sm font-medium ' + 
+                          (log.action === 'Entrada' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800')
+                        }, log.action)
+                      )
+                    ) : React.createElement('div', { className: 'text-center text-gray-500 py-8' }, 'Nenhum evento encontrado')
+                  )
+                ),
+                
+                // Footer
+                React.createElement('div', { className: 'text-center mt-12' },
+                  React.createElement('p', { className: 'text-white/60' }, 'Sistema conectado ao PostgreSQL externo • Dados em tempo real')
+                )
+              )
+            );
+          }
+          
+          ReactDOM.render(React.createElement(Dashboard), document.getElementById('root'));
+        </script>
+      </body>
+      </html>
+      EOF
+      
+      echo 'Criando servidor completo...' &&
+      cat > index.js << 'EOF'
+      const express = require('express');
+      const { Pool } = require('pg');
+      const path = require('path');
+      const app = express();
+      const port = process.env.PORT || 5000;
+      
+      const pool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+        ssl: false
+      });
+      
+      app.use(express.json());
+      app.use(express.static('public'));
+      
+      // Health check
+      app.get('/api/health', async (req, res) => {
+        try {
+          const result = await pool.query('SELECT NOW(), COUNT(*) as total_logs FROM access_logs');
+          res.json({ 
+            status: 'ok', 
+            database: 'connected',
+            timestamp: result.rows[0].now,
+            total_logs: result.rows[0].total_logs,
+            host: process.env.PGHOST
+          });
+        } catch (error) {
+          res.status(500).json({ status: 'error', error: error.message });
+        }
+      });
+      
+      // Access logs with user details
+      app.get('/api/access-logs', async (req, res) => {
+        try {
+          const result = await pool.query(\`
+            SELECT 
+              al.id,
+              al.action,
+              al.timestamp,
+              al.user_id,
+              al.user_name,
+              al.device_id,
+              al.device_name,
+              CASE 
+                WHEN al.action = 'Entrada' THEN 'Entrada'
+                WHEN al.action = 'Saída' THEN 'Saída'
+                ELSE 'Tentativa Negada'
+              END as action
+            FROM access_logs al
+            WHERE al.user_name IS NOT NULL AND al.user_name != ''
+            ORDER BY al.timestamp DESC 
+            LIMIT 100
+          \`);
+          res.json(result.rows);
+        } catch (error) {
+          console.error('Error fetching logs:', error);
+          res.status(500).json({ error: 'Failed to fetch access logs' });
+        }
+      });
+      
+      // Stores
+      app.get('/api/stores', async (req, res) => {
+        try {
+          const result = await pool.query('SELECT * FROM stores ORDER BY name');
+          res.json(result.rows);
+        } catch (error) {
+          res.status(500).json({ error: 'Failed to fetch stores' });
+        }
+      });
+      
+      // Devices
+      app.get('/api/devices', async (req, res) => {
+        try {
+          const result = await pool.query('SELECT * FROM devices ORDER BY name');
+          res.json(result.rows);
+        } catch (error) {
+          res.status(500).json({ error: 'Failed to fetch devices' });
+        }
+      });
+      
+      // Clients
+      app.get('/api/clients', async (req, res) => {
+        try {
+          const result = await pool.query('SELECT * FROM clients ORDER BY name');
+          res.json(result.rows);
+        } catch (error) {
+          res.status(500).json({ error: 'Failed to fetch clients' });
+        }
+      });
+      
+      // Serve React app
+      app.get('*', (req, res) => {
+        res.sendFile(path.join(__dirname, 'public', 'index.html'));
+      });
+      
+      app.listen(port, '0.0.0.0', () => {
+        console.log('🚀 Sistema de Controle de Acesso rodando na porta ' + port);
+        console.log('📊 Frontend: http://localhost:' + port);
+        console.log('🔍 Health: http://localhost:' + port + '/api/health');
+        console.log('📡 PostgreSQL: ' + process.env.PGHOST);
+      });
+      EOF
+      
+      echo 'Iniciando sistema completo...' &&
+      node index.js
+      "
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+    networks:
+      - default
+
+networks:
+  default:
+    driver: overlay
+    attachable: true
