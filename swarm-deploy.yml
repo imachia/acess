@@ -49,6 +49,6 @@ services:
       start_period: 120s
 
 networks:
-  default:
+  lavone:
     driver: overlay
     attachable: true
