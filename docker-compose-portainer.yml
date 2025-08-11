@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+  access-control-app:
+    image: node:18-alpine
+    container_name: access-control-saas
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:929d54bc0ff22387163f04cfb3b3d0fa@148.230.78.128:5432/controle
+      - PGHOST=148.230.78.128
+      - PGPORT=5432
+      - PGUSER=postgres
+      - PGPASSWORD=929d54bc0ff22387163f04cfb3b3d0fa
+      - PGDATABASE=controle
+      - PORT=5000
+    working_dir: /app
+    volumes:
+      - app_data:/app
+    command: |
+      sh -c "
+      echo 'Configurando ambiente...' &&
+      apk add --no-cache npm git wget &&
+      npm init -y &&
+      npm install express pg &&
+      echo 'Criando servidor...' &&
+      cat > index.js << 'EOL'
+      const express = require('express');
+      const { Pool } = require('pg');
+      const app = express();
+      const port = process.env.PORT || 5000;
+
+      const pool = new Pool({
+        connectionString: process.env.DATABASE_URL
+      });
+
+      app.use(express.json());
+      app.use(express.static('public'));
+
+      app.get('/api/health', async (req, res) => {
+        try {
+          await pool.query('SELECT 1');
+          res.json({ status: 'ok', database: 'connected' });
+        } catch (error) {
+          res.json({ status: 'error', database: 'disconnected' });
+        }
+      });
+
+      app.get('/api/access-logs', async (req, res) => {
+        try {
+          const result = await pool.query('SELECT * FROM access_logs ORDER BY timestamp DESC LIMIT 100');
+          res.json(result.rows);
+        } catch (error) {
+          res.status(500).json({ error: 'Failed to fetch logs' });
+        }
+      });
+
+      app.get('/api/stores', async (req, res) => {
+        try {
+          const result = await pool.query('SELECT * FROM stores');
+          res.json(result.rows);
+        } catch (error) {
+          res.status(500).json({ error: 'Failed to fetch stores' });
+        }
+      });
+
+      app.get('/', (req, res) => {
+        res.send('Sistema de Controle de Acesso - Funcionando!');
+      });
+
+      app.listen(port, '0.0.0.0', () => {
+        console.log('Sistema rodando na porta ' + port);
+      });
+      EOL
+      echo 'Iniciando servidor...' &&
+      node index.js
+      "
+    restart: unless-stopped
+    networks:
+      - access-network
+
+volumes:
+  app_data:
+
+networks:
+  access-network:
+    driver: bridge
