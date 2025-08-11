@@ -4,7 +4,7 @@ services:
   access-control-app:
     image: node:18-alpine
     ports:
-      - "5000:5000"
+      - "3000:5000"
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://postgres:929d54bc0ff22387163f04cfb3b3d0fa@148.230.78.128:5432/controle
